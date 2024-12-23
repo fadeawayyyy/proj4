@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Маршрут</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        label, input {
+            display: block;
+            margin-bottom: 10px;
+        }
+        input[type="submit"] {
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Введите координаты для маршрута</h1>
+    <form id="routeForm">
+        <fieldset>
+            <legend>Начальная точка</legend>
+            <label for="start_latitude">Широта:</label>
+            <input type="text" id="start_latitude" name="start_latitude" required>
+            <span class="error" id="start_latitude_error"></span>
+
+            <label for="start_longitude">Долгота:</label>
+            <input type="text" id="start_longitude" name="start_longitude" required>
+            <span class="error" id="start_longitude_error"></span>
+        </fieldset>
+
+        <fieldset>
+            <legend>Конечная точка</legend>
+            <label for="end_latitude">Широта:</label>
+            <input type="text" id="end_latitude" name="end_latitude" required>
+            <span class="error" id="end_latitude_error"></span>
+
+            <label for="end_longitude">Долгота:</label>
+            <input type="text" id="end_longitude" name="end_longitude" required>
+            <span class="error" id="end_longitude_error"></span>
+        </fieldset>
+
+        <input type="submit" value="Построить маршрут">
+    </form>
+    <div id="result_div">
+    </div>
+    <script>
+        document.getElementById('routeForm').addEventListener('submit', async function(event) {
+            let isValid = true;
+            event.preventDefault();
+            document.querySelectorAll('.error').forEach(function(error) {
+                error.textContent = '';
+            });
+
+            const startLatitude = document.getElementById('start_latitude');
+            const startLongitude = document.getElementById('start_longitude');
+            const endLatitude = document.getElementById('end_latitude');
+            const endLongitude = document.getElementById('end_longitude');
+
+            function isFloat(value) {
+                return !isNaN(value) && parseFloat(value) == value;
+            }
+
+            if (!isFloat(startLatitude.value)) {
+                document.getElementById('start_latitude_error').textContent = 'Введите корректную широту (число с плавающей запятой)';
+                isValid = false;
+            }
+            if (!isFloat(startLongitude.value)) {
+                document.getElementById('start_longitude_error').textContent = 'Введите корректную долготу (число с плавающей запятой)';
+                isValid = false;
+            }
+            if (!isFloat(endLatitude.value)) {
+                document.getElementById('end_latitude_error').textContent = 'Введите корректную широту (число с плавающей запятой)';
+                isValid = false;
+            }
+            if (!isFloat(endLongitude.value)) {
+                document.getElementById('end_longitude_error').textContent = 'Введите корректную долготу (число с плавающей запятой)';
+                isValid = false;
+            }
+
+            if (!isValid) {
+                event.preventDefault();
+                return;
+            }
+
+            let point1Response = await fetch('weather/get?latitude='+startLatitude.value+"&longitude="+startLongitude.value);
+            let point2Response = await fetch('weather/get?latitude='+endLatitude.value+"&longitude="+endLongitude.value);
+
+            let point1Text = await point1Response.text()
+            let point2Text = await point2Response.text()
+            try {
+                let point1Json = JSON.parse(point1Text)
+                let point2Json = JSON.parse(point2Text)
+                let sovetForPoint1 = 'Сегодня не самая лучшая погода, возможно, лучше остаться дома';
+                let sovetForPoint2 = 'Сегодня не самая лучшая погода, возможно, лучше остаться дома';
+                if(point1Json['it_bad_weather'] === false) {
+                    sovetForPoint1 = 'Сегодня отличный день чтобы погулять!';
+                }
+                if(point2Json['it_bad_weather'] === false) {
+                    sovetForPoint2 = 'Сегодня отличный день чтобы погулять!';
+                }
+                document.getElementById("result_div").innerText = `Точка 1 (${startLatitude.value} ${startLongitude.value}):\n\nТемпература: ${point1Json['temperature']} °C\n
+                Влажность воздуха: ${point1Json['humidity']}\nСкорость ветра: ${point1Json['speed_wind']}\nСовет: ${sovetForPoint1}\n\n
+                Точка 2 (${endLatitude.value} ${endLongitude.value}):\n\nТемпература: ${point2Json['temperature']} °C\n
+                Влажность воздуха: ${point2Json['humidity']}\nСкорость ветра: ${point2Json['speed_wind']}\nСовет: ${sovetForPoint2}`;
+            }
+            catch {
+                try{
+                    let point1Json = JSON.parse(point1Text)
+                }
+                catch {
+                    alert(point1Text);
+                    return;
+                }
+                try{
+                    let point2Json = JSON.parse(point2Text)
+                }
+                catch{
+                    alert(point2Text);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
